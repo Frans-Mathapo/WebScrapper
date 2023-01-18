@@ -1,6 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using Microsoft.VisualBasic;
 using System;
 using System.Formats.Asn1;

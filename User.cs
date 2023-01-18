@@ -13,5 +13,5 @@ namespace WebScrapper
         public string Date { get; set; }
 
 
-}
+    }
 }

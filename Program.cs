@@ -1,58 +1,51 @@
 ﻿using HtmlAgilityPack;
-using Microsoft.VisualBasic;
 using System;
-using System.Formats.Asn1;
-using System.Globalization;
-using System.Runtime.CompilerServices;
+using Slack.Webhooks;
+using Newtonsoft.Json;
 using WebScrapper;
-using CsvHelper;
-using System.Net;
-using System.Collections.Generic;
-using System.IO;
-using static System.Reflection.Metadata.BlobBuilder;
 
-
-string url = "https://app.slack.com/client/T04BCBKBLLA/C04B5PSTB70";
-
-//Console.WriteLine(doc.DocumentNode.InnerHtml);
-//HtmlDocument doc = GetDocument(url);
-HtmlDocument doc = GetDocument(url);
-HtmlNodeCollection userInfo = doc.DocumentNode.SelectNodes("//*[@class=\"c-virtual_list__scroll_container\"]");
-
-var data = new List<User>();
-
-exportToCSV(data);
-
-foreach (var user in userInfo)
+class Program
 {
-
-    var userName = "//button[@class=\"c-link--button c-message__sender_button\"]";
-    var userMessage = "//div[@class=\"p-rich_text_section\"]";
-    var dateTxt = "//button[@class=\"c-button-unstyled c-message_list__day_divider__label__pill\"]";
-    var info = new User
+    static void Main(string[] args)
     {
-        Name = user.SelectSingleNode(userName).InnerText,
-        FindMessage = user.SelectSingleNode(userMessage).InnerText,
-        Date = user.SelectSingleNode(dateTxt).InnerText,
-    };
-    data.Add(info);
-}
+        string apiToken = "xapp -1-A04HZ53LZM3-4704213407216-2ec42ee02b94c121cfef3c8c7ae86a575815cbed0695c592c44e889d5371e6d9";
+        string channelId = "C04B5PSTB70";
+        string requestUrl = $"https://slack.com/api/conversations.history?token={apiToken}&channel={channelId}";
 
-//Convert to csv file
-void exportToCSV(List<User> info) 
-{
-    using (var writer = new StreamWriter("./books.csv"))
-    using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-    {
-        csv.WriteRecords(info);
+        // Send the API request
+        using (var httpClient = new HttpClient())
+        {
+            var response = httpClient.GetAsync(requestUrl).Result;
+            var responseJson = response.Content.ReadAsStringAsync().Result;
+
+            // Deserialize the JSON response
+            var responseData = JsonConvert.DeserializeObject<SlackResponse>(responseJson);
+
+            // Extract the messages from the response
+            var messages = responseData.messages;
+
+            if (responseData.messages == null || !responseData.messages.Any())
+            {
+                // Handle empty response
+                Console.WriteLine("No messages found");
+                return;
+            }
+            else
+            {
+                // Print the messages to the console
+                foreach (var message in messages)
+                {
+                    // Get the sender's name from the API response
+                    var sender = responseData.users.FirstOrDefault(x => x.id == message.user)?.name;
+
+                    // Get the timestamp of the message
+                    var timestamp = message.ts;
+                    DateTime messageDate = DateTimeOffset.FromUnixTimeSeconds((long)Double.Parse(timestamp)).DateTime;
+                    // Print the sender's name, message, and date
+                    Console.WriteLine($"Sender: {sender}  Message: {message.text} Date: {messageDate.ToString("yyyy-MM-dd HH:mm:ss")}");
+                }
+            }
+        }
+
     }
 }
-
-//The funstion parses the URL return HTML document
-static HtmlDocument GetDocument(string url)
-{
-    HtmlWeb web = new HtmlWeb();
-    HtmlDocument doc = web.Load(url);
-    return doc;
-}
-
